@@ -1,0 +1,12 @@
+{
+  "name": "comfy-rt-client",
+  "version": "1.0.0",
+  "description": "Comfy RT Client",
+  "author": "marco@bymar.co",
+  "scripts": {
+    "dev": "http-server . -c-1"
+  },
+  "dependencies": {
+    "http-server": "^14.1.1"
+  }
+}
