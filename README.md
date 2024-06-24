@@ -1,4 +1,4 @@
-# ComfyUI RT Client
+# COMFY-RT-CLIENT
 
 ```
 npm install

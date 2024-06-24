@@ -18,6 +18,7 @@ class ComfyUI {
     this.clientId = uuidv4();
     this.nodes = nodes;
     this.queueRemaining = 0;
+    this.imageURL = null;
     this.comfyUIServerURL = comfyUIServerURL;
 
     if (onSaveCallback) {
@@ -38,6 +39,25 @@ class ComfyUI {
   
     this.comfyUI = new WebSocket(socketURL);
   
+    const reader = new FileReader();
+    reader.onload = () => {
+      const arrayBuffer = reader.result;
+      const dataView = new DataView(arrayBuffer);
+      const event = dataView.getUint32(0);
+      const format = dataView.getUint32(4);
+      if (event === 1 && format === 2) { // 1=PREVIEW_IMAGE, 2=PNG
+        // Queue Next Frame
+        this.onQueueCallback();
+
+        // Extract Blob
+        const blob = new Blob([new Uint8Array(arrayBuffer.slice(8))], {type: 'image/png'});
+        this.imageURL = URL.createObjectURL(blob);
+
+        // Callback Image URL
+        // this.onSaveCallback(imageURL);
+      }
+    };
+
     // Connect
     this.comfyUI.onopen = (data) => {
       console.log('ComfyUI server opened.');
@@ -52,36 +72,26 @@ class ComfyUI {
     this.comfyUI.onmessage = async (event) => {
       // Send Image Websocket Method
       // Check if event.data is an image blob
-      if (event.data instanceof Blob) {  
-        var reader = new FileReader();
-        reader.onload = () => {
-            var arrayBuffer = reader.result;
-            var dataView = new DataView(arrayBuffer);
-            var event = dataView.getUint32(0);
-            var format = dataView.getUint32(4);
-            if (event === 1 && format === 2) { // 1=PREVIEW_IMAGE, 2=PNG
-              // Queue Next Frame
-              this.onQueueCallback();
-
-              // Extract Blob
-              var blob = new Blob([new Uint8Array(arrayBuffer.slice(8))], {type: 'image/png'});
-              var imageURL = URL.createObjectURL(blob);
-
-              // Callback Image URL
-              this.onSaveCallback(imageURL);
-            }
-        };
+      if (event.data instanceof Blob) {
         reader.readAsArrayBuffer(event.data);
-      } else if (event.data instanceof ArrayBuffer) {
+      } else {
         const message = JSON.parse(event.data);
-        console.log(message)
+        // console.log(message)
 
         if (message.type === 'status') {
+          // console.log('Status Update:', message.data.status)
           this.queueRemaining = message.data.status.exec_info.queue_remaining;
+        }
+
+        if (message.type === 'execution_error') {
+          console.error('Execution Error');
+          this.onQueueCallback();
         }
   
         if (message.data?.prompt_id) {      
-          if (message.type === 'executed' && this.nodes.api_save.includes(message.data.node)) {
+          // if (message.type === 'executed' && this.nodes.api_save.includes(message.data.node)) {
+          if (message.type === 'executed') {
+            this.onSaveCallback(this.imageURL, message.data.prompt_id);
             // Triggers when node matches "api_save" in the nodes object, usually a PreviewImage
   
             // PreviewImage Method
@@ -116,10 +126,11 @@ class ComfyUI {
     base64_data,
     checkpoint,
     denoise,
+    unet_name,
   }) {
     return new Promise(async (resolve, reject) => {
       try {
-        console.log(`Queuing ComfyUI on ${this.comfyUIServerURL}`);
+        // console.log(`Queuing ComfyUI on ${this.comfyUIServerURL}`);
 
         // TODO: Ping to see if serverURL is open
 
@@ -140,6 +151,8 @@ class ComfyUI {
               workflowApiTemp[nodeId].inputs.ckpt_name = checkpoint;
             } else if (nodeType === 'base64_data') {
               workflowApiTemp[nodeId].inputs.base64_data = base64_data;
+            } else if (nodeType === 'unet_name') {
+              workflowApiTemp[nodeId].inputs.unet_name = unet_name;
             }
           });
         }
@@ -186,3 +199,5 @@ class ComfyUI {
     });
   }
 }
+
+export default ComfyUI;
