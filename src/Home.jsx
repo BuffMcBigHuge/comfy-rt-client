@@ -409,6 +409,7 @@ const Main = () => {
               className="mt-2 w-full h-2 appearance-none bg-transparent slider"
               value={denoise}
               onChange={handleDenoiseChange}
+              onFocus={(e) => e.target.blur()}
             />
           </div>
           <Button
