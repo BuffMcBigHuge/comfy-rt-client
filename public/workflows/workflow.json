@@ -1,6 +1,6 @@
 {
-  "last_node_id": 213,
-  "last_link_id": 418,
+  "last_node_id": 214,
+  "last_link_id": 419,
   "nodes": [
     {
       "id": 10,
@@ -14,7 +14,7 @@
         "1": 58
       },
       "flags": {},
-      "order": 9,
+      "order": 8,
       "mode": 0,
       "inputs": [
         {
@@ -204,46 +204,6 @@
       ]
     },
     {
-      "id": 209,
-      "type": "easy loadImageBase64",
-      "pos": [
-        10,
-        610
-      ],
-      "size": {
-        "0": 320,
-        "1": 130
-      },
-      "flags": {},
-      "order": 4,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            411
-          ],
-          "shape": 3,
-          "slot_index": 0
-        },
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": null,
-          "shape": 3
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "easy loadImageBase64"
-      },
-      "widgets_values": [
-        "",
-        "Hide",
-        "ComfyUI"
-      ]
-    },
-    {
       "id": 211,
       "type": "VAEEncode",
       "pos": [
@@ -255,13 +215,13 @@
         "1": 46
       },
       "flags": {},
-      "order": 8,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
           "name": "pixels",
           "type": "IMAGE",
-          "link": 411
+          "link": 419
         },
         {
           "name": "vae",
@@ -296,7 +256,7 @@
         "1": 58
       },
       "flags": {},
-      "order": 10,
+      "order": 12,
       "mode": 0,
       "inputs": [
         {
@@ -332,7 +292,7 @@
         "1": 100
       },
       "flags": {},
-      "order": 11,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
@@ -437,7 +397,7 @@
         "1": 100
       },
       "flags": {},
-      "order": 12,
+      "order": 11,
       "mode": 0,
       "inputs": [
         {
@@ -473,7 +433,7 @@
       ],
       "size": {
         "0": 315,
-        "1": 382
+        "1": 402
       },
       "flags": {},
       "order": 13,
@@ -498,6 +458,11 @@
           "name": "latent_image",
           "type": "LATENT",
           "link": 417
+        },
+        {
+          "name": "scheduler_func_opt",
+          "type": "SCHEDULER_FUNC",
+          "link": null
         }
       ],
       "outputs": [
@@ -541,7 +506,7 @@
         "1": 82
       },
       "flags": {},
-      "order": 5,
+      "order": 4,
       "mode": 0,
       "outputs": [
         {
@@ -574,7 +539,7 @@
         "1": 110
       },
       "flags": {},
-      "order": 6,
+      "order": 5,
       "mode": 0,
       "outputs": [
         {
@@ -603,6 +568,44 @@
       },
       "widgets_values": [
         "sdxl\\wildcardxXLFusion_fusionOG.safetensors"
+      ]
+    },
+    {
+      "id": 214,
+      "type": "ETN_LoadImageBase64",
+      "pos": [
+        10,
+        610
+      ],
+      "size": {
+        "0": 315,
+        "1": 78
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            419
+          ],
+          "shape": 3,
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ETN_LoadImageBase64"
+      },
+      "widgets_values": [
+        ""
       ]
     }
   ],
@@ -654,14 +657,6 @@
       211,
       1,
       "VAE"
-    ],
-    [
-      411,
-      209,
-      0,
-      211,
-      0,
-      "IMAGE"
     ],
     [
       412,
@@ -718,16 +713,24 @@
       101,
       0,
       "LATENT"
+    ],
+    [
+      419,
+      214,
+      0,
+      211,
+      0,
+      "IMAGE"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.9229599817706431,
+      "scale": 0.8390545288824027,
       "offset": {
-        "0": 123.6157614300511,
-        "1": 250.2317066428082
+        "0": 131.16690139023606,
+        "1": 195.9176507897807
       }
     }
   },

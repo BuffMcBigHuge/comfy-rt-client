@@ -14,6 +14,7 @@ const Main = () => {
   const COMFY_SERVER_URL_4090 = 'http://10.0.0.4:8188';
   const COMFY_SERVER_URL_4080 = 'http://10.0.0.3:8188';
   // const COMFY_SERVER_URL_3080 = 'http://10.0.0.4:8189';
+
   const queueComfy = useRef(() => {});
   const queueComfy2 = useRef(() => {});
   const queueComfy3 = useRef(() => {});
@@ -22,7 +23,6 @@ const Main = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [isPaused, setIsPaused] = useState(true);
-  const previousFrameRef = useRef(null);
   const [prompt, setPrompt] = useState('');
   const [denoise, setDenoise] = useState(0.5);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -44,19 +44,19 @@ const Main = () => {
     if (initalizedRef.current) return;
     initalizedRef.current = true;
 
+    console.log('Starting ComfyUI RT Client...');
+
+    // Load Prompt/Denoise from Cookie
     const loadCookieValue = (name) => {
       const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
       if (match) return match[2];
-      return '';
+      return null;
     };
+    setPrompt(loadCookieValue('prompt') || handlePromptChange({ target: { value: '0.5'}}));
+    setDenoise(loadCookieValue('denoise') || handleDenoiseChange({ target: { value: '0.5'}}));
 
-    setPrompt(loadCookieValue('prompt'));
-    setDenoise(loadCookieValue('denoise'));
-
-    console.log('Starting ComfyUI RT Client...');
-
+    // Setup Canvas
     const canvas = canvasRef.current;
-    const video = videoRef.current;
     const aspectRatio = window.innerWidth / window.innerHeight;
 
     canvas.height = Math.max(512, Math.min(1024, window.innerHeight));
@@ -73,6 +73,7 @@ const Main = () => {
     // canvas.height = 1216;
     // canvas.width = 896;
 
+    // Load Workflow
     let workflow, workflowAPI;
     fetch('./workflows/workflow.json')
       .then((response) => response.json())
@@ -84,24 +85,26 @@ const Main = () => {
       .then((data) => {
         workflowAPI = data;
         initializeComfyUI('4090', COMFY_SERVER_URL_4090, queueComfy);
-        initializeComfyUI('4080', COMFY_SERVER_URL_4080, queueComfy2);
+        // initializeComfyUI('4080', COMFY_SERVER_URL_4080, queueComfy2);
         // initializeComfyUI('3080', COMFY_SERVER_URL_3080, queueComfy3);
       })
       .catch((error) => console.error('Error:', error));
 
     const initializeComfyUI = (GPU, URL, queueComfy) => {
       console.log(`Initializing ComfyUI on GPU ${GPU}...`);
+
       queueComfy.current = async () => {
         if (isPausedRef.current) return;
 
-        const prompt = document.cookie.replace(/(?:(?:^|.*;\s*)prompt\s*=\s*([^;]*).*$)|^.*$/, '$1');
-        const denoise = document.cookie.replace(/(?:(?:^|.*;\s*)denoise\s*=\s*([^;]*).*$)|^.*$/, '$1');
+        // Retrieve Denoise/Prompt from Cookie
+        const prompt = loadCookieValue('prompt');
+        const denoise = parseFloat(loadCookieValue('denoise')).toFixed(1);
 
         const response = await comfy.queue({
           workflow,
           workflowAPI,
           prompt,
-          denoise: parseFloat(denoise).toFixed(1),
+          denoise,
           base64_data: captureFrame(),
           unet_name: GPU === '4090' ?
             'wildcardxlfusion_hyper_4090_$dyn-b-1-1-1-h-512-1024-512-w-512-1024-512_00001_.engine' :
@@ -121,7 +124,7 @@ const Main = () => {
           seeds: ['213'],
           prompts: ['6'],
           denoise: ['213'],
-          base64_data: ['209'],
+          base64_data: ['214'],
           api_save: ['204'],
           unet_name: ['151'],
         },
@@ -148,25 +151,14 @@ const Main = () => {
       // Draw the current video frame onto the canvas
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // Capture the current frame as an image
-      const newFrame = new Image();
-      newFrame.src = canvas.toDataURL('image/png');
-
-      // Set the current frame as the previous frame for the next capture
-      previousFrameRef.current = newFrame;
-
       // Optionally, return the current frame's data URL
       return canvas.toDataURL('image/png').replace('data:image/png;base64,', '');
     };
 
-    return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
-      }
-    };
   }, [onFrameReceived]);
   
   useEffect(() => {
+    // Initialize devices and start media
 
     const initializeDevices = async () => {
       const getDevices = async () => {
@@ -267,7 +259,7 @@ const Main = () => {
     document.cookie = `denoise=${event.target.value}; path=/`;
   };
 
-  const toggleScreenShare = () => {
+  const handleScreenShare = () => {
     setIsScreenSharing(!isScreenSharing);
   };
 
@@ -278,7 +270,6 @@ const Main = () => {
   };
 
   const gamepads = useGamepads(gamepads => setGamepads(gamepads));
-  const isGamepadConnected = Object.keys(gamepads).length > 0;
 
   const prompts = [
     'mexico city',
@@ -364,12 +355,6 @@ const Main = () => {
     }
   }, [gamepads]);
 
-  const gamepadDisplay = isGamepadConnected ? (
-    <div>Gamepad connected</div>
-  ) : (
-    <div>No gamepad connected</div>
-  );
-
   return (
     <div>
       <div onClick={throttleScreenshot}>
@@ -434,7 +419,7 @@ const Main = () => {
             id="screenshareButton"
             variant="primary"
             size="md"
-            onClick={toggleScreenShare}
+            onClick={handleScreenShare}
           >
             {isScreenSharing ? 'Screen' : 'Webcam'}
           </Button>
@@ -444,7 +429,6 @@ const Main = () => {
             Center Pad: Save Image
             <br />
             Buttons: Prompt
-            <div style={{ display: 'none' }}>{gamepadDisplay}</div>
           </div>
         </div>
       </div>

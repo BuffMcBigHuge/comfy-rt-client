@@ -46,15 +46,9 @@ class ComfyUI {
       const event = dataView.getUint32(0);
       const format = dataView.getUint32(4);
       if (event === 1 && format === 2) { // 1=PREVIEW_IMAGE, 2=PNG
-        // Queue Next Frame
-        this.onQueueCallback();
-
         // Extract Blob
         const blob = new Blob([new Uint8Array(arrayBuffer.slice(8))], {type: 'image/png'});
         this.imageURL = URL.createObjectURL(blob);
-
-        // Callback Image URL
-        // this.onSaveCallback(imageURL);
       }
     };
 
@@ -71,40 +65,50 @@ class ComfyUI {
     // Message
     this.comfyUI.onmessage = async (event) => {
       // Send Image Websocket Method
-      // Check if event.data is an image blob
+      
       if (event.data instanceof Blob) {
+        // Check if event.data is an image blob
+        // https://github.com/Acly/comfyui-tooling-nodes (Send Image (WebSocket)
         reader.readAsArrayBuffer(event.data);
       } else {
-        const message = JSON.parse(event.data);
-        // console.log(message)
-
-        if (message.type === 'status') {
-          // console.log('Status Update:', message.data.status)
-          this.queueRemaining = message.data.status.exec_info.queue_remaining;
-        }
-
-        if (message.type === 'execution_error') {
-          console.error('Execution Error');
-          this.onQueueCallback();
-        }
+        try {
+          const message = JSON.parse(event.data);
+          // console.log(message)
   
-        if (message.data?.prompt_id) {      
-          // if (message.type === 'executed' && this.nodes.api_save.includes(message.data.node)) {
-          if (message.type === 'executed') {
-            this.onSaveCallback(this.imageURL, message.data.prompt_id);
-            // Triggers when node matches "api_save" in the nodes object, usually a PreviewImage
+          if (message.type === 'status') {
+            // console.log('Status Update:', message.data.status)
+            this.queueRemaining = message.data.status.exec_info.queue_remaining;
+          }
   
-            // PreviewImage Method
-            /*
-            if (this.onQueueCallback) {
-              console.log(`Completed Prompt: ${message.data.prompt_id}`);
+          if (message.type === 'execution_error') {
+            console.error('Execution Error');
+            this.onQueueCallback();
+          }
+    
+          if (message.data?.prompt_id) {
+            if (message.type === 'executed') {
+              // Queue Next Frame
               this.onQueueCallback();
+              this.onSaveCallback(this.imageURL, message.data.prompt_id);
             }
-            if (this.onSaveCallback) {
-              this.onSaveCallback(message);
+
+            /*
+            if (message.type === 'executed' && this.nodes.api_save.includes(message.data.node)) {
+              // Method: Triggers when node matches "api_save" in the nodes object, usually a PreviewImage
+          
+              if (this.onQueueCallback) {
+                console.log(`Completed Prompt: ${message.data.prompt_id}`);
+                this.onQueueCallback();
+              }
+              if (this.onSaveCallback) {
+                this.onSaveCallback(message);
+              }
             }
             */
           }
+        } catch (err) {
+          console.error('Unknown message:', event.data);
+          console.error(err);
         }
       }
     };
@@ -117,6 +121,11 @@ class ComfyUI {
       // Close Websocket
       this.disconnect();
     };
+  }
+
+  disconnect() {
+    console.log('Disconnecting from ComfyUI server...');
+    this.comfyUI.close();
   }
 
   queue({
@@ -150,7 +159,7 @@ class ComfyUI {
             } else if (nodeType === 'checkpoint') {
               workflowApiTemp[nodeId].inputs.ckpt_name = checkpoint;
             } else if (nodeType === 'base64_data') {
-              workflowApiTemp[nodeId].inputs.base64_data = base64_data;
+              workflowApiTemp[nodeId].inputs.image = base64_data; // Load Image (Base64)
             } else if (nodeType === 'unet_name') {
               workflowApiTemp[nodeId].inputs.unet_name = unet_name;
             }

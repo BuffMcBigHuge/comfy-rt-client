@@ -93,21 +93,10 @@
       "title": "Empty Latent Image"
     }
   },
-  "209": {
-    "inputs": {
-      "base64_data": "",
-      "image_output": "Hide",
-      "save_prefix": "ComfyUI"
-    },
-    "class_type": "easy loadImageBase64",
-    "_meta": {
-      "title": "Load Image (Base64)"
-    }
-  },
   "211": {
     "inputs": {
       "pixels": [
-        "209",
+        "214",
         0
       ],
       "vae": [
@@ -165,6 +154,15 @@
     "class_type": "KSampler //Inspire",
     "_meta": {
       "title": "KSampler (inspire)"
+    }
+  },
+  "214": {
+    "inputs": {
+      "image": ""
+    },
+    "class_type": "ETN_LoadImageBase64",
+    "_meta": {
+      "title": "Load Image (Base64)"
     }
   }
 }
