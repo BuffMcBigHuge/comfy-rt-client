@@ -135,7 +135,9 @@ class ComfyUI {
     base64_data,
     checkpoint,
     denoise,
+    vae,
     unet_name,
+    model_type,
   }) {
     return new Promise(async (resolve, reject) => {
       try {
@@ -156,12 +158,16 @@ class ComfyUI {
               workflowApiTemp[nodeId].inputs.text = prompt;
             } else if (nodeType === 'denoise') {
               workflowApiTemp[nodeId].inputs.denoise = denoise;
+            } else if (nodeType === 'vae') {
+              workflowApiTemp[nodeId].inputs.vae_name = vae;
             } else if (nodeType === 'checkpoint') {
               workflowApiTemp[nodeId].inputs.ckpt_name = checkpoint;
             } else if (nodeType === 'base64_data') {
               workflowApiTemp[nodeId].inputs.image = base64_data; // Load Image (Base64)
             } else if (nodeType === 'unet_name') {
               workflowApiTemp[nodeId].inputs.unet_name = unet_name;
+            } else if (nodeType === 'model_type') {
+              workflowApiTemp[nodeId].inputs.model_type = model_type;
             }
           });
         }

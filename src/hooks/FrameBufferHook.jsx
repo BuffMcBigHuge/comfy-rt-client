@@ -1,42 +1,79 @@
 import { useRef, useEffect } from 'react';
 
-const useBufferedFrameDisplay = (targetFPS = 30) => {
+const useBufferedFrameDisplay = (initialTargetFPS = 30) => {
     const outputImageRef = useRef(null);
     const frameBuffer = useRef([]);
     const requestRef = useRef();
     const lastFrameTime = useRef(Date.now());
+    const gpuFrameTimings = useRef([]); 
+    const targetFPS = useRef(initialTargetFPS);
 
-    useEffect(() => {
-        const displayNextFrame = () => {
-            const currentTime = Date.now();
-            // Check if there's a frame to display and if the current time is past the expected display time
-            if (frameBuffer.current.length > 0 && currentTime >= frameBuffer.current[0].expectedDisplayTime) {
-                const nextFrame = frameBuffer.current.shift().frame;
-                if (outputImageRef.current) {
-                    outputImageRef.current.src = nextFrame; // Display the frame
-                }
-                lastFrameTime.current = currentTime; // Update the last frame time
-            }
-            requestRef.current = requestAnimationFrame(displayNextFrame); // Continue the loop
-        };
-
-        requestRef.current = requestAnimationFrame(displayNextFrame); // Start the loop
-
-        return () => cancelAnimationFrame(requestRef.current); // Cleanup on unmount
-    }, [targetFPS]); // Dependency array
-
-    const onFrameReceived = (newFrame) => {
-        const frameInterval = 1000 / targetFPS;
+    const displayNextFrame = () => {
         const currentTime = Date.now();
-        const expectedDisplayTime = lastFrameTime.current + frameInterval;
+        if (frameBuffer.current.length > 0 && currentTime >= frameBuffer.current[0].expectedDisplayTime) {
+            const nextFrame = frameBuffer.current.shift().frame;
+            if (outputImageRef.current) {
+                outputImageRef.current.src = nextFrame;
+            }
+            lastFrameTime.current = currentTime;
+        }
+        requestRef.current = requestAnimationFrame(displayNextFrame);
+    };
 
-        // Add the frame to the buffer if it's not too late to be displayed
-        if (currentTime <= expectedDisplayTime || frameBuffer.current.length === 0) {
-            frameBuffer.current.push({ frame: newFrame, expectedDisplayTime });
+    const onFrameReceived = (newFrame, index) => {
+      console.log('Frame received', index)
+      const frameInterval = 1000 / targetFPS.current;
+      const currentTime = Date.now();
+      const expectedDisplayTime = lastFrameTime.current + frameInterval;
+      const frameObject = { frame: newFrame, expectedDisplayTime, index };
+
+      if (currentTime <= expectedDisplayTime || frameBuffer.current.length === 0) {
+          const insertAt = frameBuffer.current.findIndex(f => f.index > index);
+          if (insertAt === -1) {
+              frameBuffer.current.push(frameObject);
+          } else {
+              frameBuffer.current.splice(insertAt, 0, frameObject);
+          }
+
+          gpuFrameTimings.current.push(currentTime - lastFrameTime.current);
+          if (gpuFrameTimings.current.length > 20) gpuFrameTimings.current.shift();
+
+          console.log('Average frame timing', getAverageFrameTiming(), 'ms');
+
+          if (gpuFrameTimings.current.length === 20) {
+              const averageFrameTiming = getAverageFrameTiming();
+              const newTargetFPS = Math.min(60, Math.floor(1000 / averageFrameTiming));
+              if (newTargetFPS !== targetFPS.current) {
+                  console.log('Adjusting target FPS to', newTargetFPS);
+                  targetFPS.current = newTargetFPS;
+              }
+          }
         }
     };
 
-    return { onFrameReceived, outputImageRef };
+    const getAverageFrameTiming = () => {
+        const timings = gpuFrameTimings.current;
+        if (timings.length === 0) return 0;
+        return timings.reduce((acc, curr) => acc + curr, 0) / timings.length;
+    };
+
+    const startPlayback = () => {
+        frameBuffer.current = [];
+        gpuFrameTimings.current = [];
+        lastFrameTime.current = Date.now();
+
+        if (requestRef.current) {
+            cancelAnimationFrame(requestRef.current);
+        }
+        requestRef.current = requestAnimationFrame(displayNextFrame);
+    };
+
+    const stopPlayback = () => {
+        cancelAnimationFrame(requestRef.current);
+        requestRef.current = null;
+    };
+
+    return { onFrameReceived, outputImageRef, startPlayback, stopPlayback };
 };
 
 export default useBufferedFrameDisplay;

@@ -15,34 +15,89 @@ const Main = () => {
   const COMFY_SERVER_URL_4080 = 'http://10.0.0.3:8188';
   // const COMFY_SERVER_URL_3080 = 'http://10.0.0.4:8189';
 
-  const queueComfy = useRef(() => {});
-  const queueComfy2 = useRef(() => {});
-  const queueComfy3 = useRef(() => {});
+  const queueComfy4090 = useRef(() => {});
+  const timeRef4090 = useRef(0);
+
+  const queueComfy4080 = useRef(() => {});
+  const timeRef4080 = useRef(0);
+
+  const queueComfy3080 = useRef(() => {});
+  const timeRef3080 = useRef(0);
 
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
   const [isPaused, setIsPaused] = useState(true);
   const [prompt, setPrompt] = useState('');
   const [denoise, setDenoise] = useState(0.5);
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const isPausedRef = useRef(isPaused);
   const [orderedPromptIds, setOrderedPromptIds] = useState([]);
-  const orderedPromptIdsRef = useRef(orderedPromptIds);
   const [devices, setDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
+  const [initialized, setInitialized] = useState(false);
 
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const isPausedRef = useRef(isPaused);
+  const orderedPromptIdsRef = useRef(orderedPromptIds);
   useEffect(() => {
     orderedPromptIdsRef.current = orderedPromptIds;
   }, [orderedPromptIds]);
-  const initalizedRef = useRef(false);
 
+  // Models
+  const modelOptions = useRef([
+    {
+      model4080: 'pixel_hyper_4080_$dyn-b-1-2-1-h-896-1216-1216-w-896-1216-1216_00001_.engine',
+      model4090: 'pixel_hyper_4090_$dyn-b-1-2-1-h-896-1216-1216-w-896-1216-1216_00001_.engine',
+      label: 'Pixel Alchemy (896/1216)',
+      model_type: 'sdxl_base',
+      vae: 'taesdxl',
+      model: 'sdxl\\pixelAlchemy_pixelAlchemyV16.safetensors',
+      min: 896,
+      max: 1216,
+    }, 
+    {
+      model4080: 'wildcardxlfusion_hyper_4080_$dyn-b-1-2-1-h-896-1216-1216-w-896-1216-1216_00001_.engine',
+      model4090: 'wildcardxlfusion_4090_$dyn-b-1-2-1-h-896-1216-1216-w-896-1216-1216_00001_.engine',
+      label: 'Wildcard Fusion XL (896/1216)',
+      model_type: 'sdxl_base',
+      vae: 'taesdxl',
+      model: 'sdxl\\wildcardxXLFusion_fusionOG.safetensors',
+      min: 896,
+      max: 1216,
+    },
+    {
+      model4080: 'wildcardfusionxl_hyper_4080_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
+      model4090: 'wildcardxlfusion_hyper_4090_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
+      label: 'Wildcard Fusion XL (512/1024)',
+      model_type: 'sdxl_base',
+      vae: 'taesdxl',
+      model: 'sdxl\\wildcardxXLFusion_fusionOG.safetensors',
+      min: 512,
+      max: 1024,
+    },
+    {
+      model4080: '11_hyper_4080_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
+      model4090: '11_hyper_4090_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
+      label: '11 (512/1024)',
+      model_type: 'sd1.x',
+      vae: 'taesd',
+      model: 'sd15\\11.safetensors',
+      min: 512,
+      max: 1024,
+    },
+  ]);
+  const [modelSelected, setModelSelected] = useState(modelOptions.current[0]);
+  const modelSelectedRef = useRef(modelSelected);
+  useEffect(() => {
+    modelSelectedRef.current = modelSelected;
+  }, [modelSelected]);
+  //
+  
   const showToast = useToast();
-  const { onFrameReceived, outputImageRef } = useFrameBuffer();
+  const { onFrameReceived, outputImageRef, startPlayback, stopPlayback } = useFrameBuffer();
 
   useEffect(() => {
-    if (initalizedRef.current) return;
-    initalizedRef.current = true;
+    if (initialized) return;
+    setInitialized(true);
 
     console.log('Starting ComfyUI RT Client...');
 
@@ -52,26 +107,8 @@ const Main = () => {
       if (match) return match[2];
       return null;
     };
-    setPrompt(loadCookieValue('prompt') || handlePromptChange({ target: { value: '0.5'}}));
+    setPrompt(loadCookieValue('prompt') || handlePromptChange({ target: { value: 'Cool'}}));
     setDenoise(loadCookieValue('denoise') || handleDenoiseChange({ target: { value: '0.5'}}));
-
-    // Setup Canvas
-    const canvas = canvasRef.current;
-    const aspectRatio = window.innerWidth / window.innerHeight;
-
-    canvas.height = Math.max(512, Math.min(1024, window.innerHeight));
-    canvas.width = Math.max(512, Math.min(1024, window.innerWidth));
-    if (canvas.width > canvas.height) {
-      canvas.height = canvas.width / aspectRatio;
-    } else {
-      canvas.width = canvas.height * aspectRatio;
-    }
-    canvas.width = Math.max(512, Math.min(1024, canvas.width));
-    canvas.height = Math.max(512, Math.min(1024, canvas.height));
-
-    // Test
-    // canvas.height = 1216;
-    // canvas.width = 896;
 
     // Load Workflow
     let workflow, workflowAPI;
@@ -84,9 +121,9 @@ const Main = () => {
       .then((response) => response.json())
       .then((data) => {
         workflowAPI = data;
-        initializeComfyUI('4090', COMFY_SERVER_URL_4090, queueComfy);
-        // initializeComfyUI('4080', COMFY_SERVER_URL_4080, queueComfy2);
-        // initializeComfyUI('3080', COMFY_SERVER_URL_3080, queueComfy3);
+        initializeComfyUI('4090', COMFY_SERVER_URL_4090, queueComfy4090);
+        initializeComfyUI('4080', COMFY_SERVER_URL_4080, queueComfy4080);
+        // initializeComfyUI('3080', COMFY_SERVER_URL_3080, queueComfy3080);
       })
       .catch((error) => console.error('Error:', error));
 
@@ -105,33 +142,42 @@ const Main = () => {
           workflowAPI,
           prompt,
           denoise,
+          checkpoint: modelSelectedRef.current.model,
+          vae: modelSelectedRef.current.vae,
+          model_type: modelSelectedRef.current.model_type,
           base64_data: captureFrame(),
           unet_name: GPU === '4090' ?
-            'wildcardxlfusion_hyper_4090_$dyn-b-1-1-1-h-512-1024-512-w-512-1024-512_00001_.engine' :
-            'wildcardxlfusion_hyper_4080_$dyn-b-1-2-1-h-512-1024-512-w-512-1024-512_00001_.engine'
-            // 'wildcardxlfusion_hyper_4090_$dyn-b-1-2-1-h-1216-1216-1216-w-896-896-896_00001_.engine' :
-            // 'wildcardxlfusion_hyper_4080_$dyn-b-1-2-1-h-1216-1216-1216-w-896-896-896_00001_.engine'
-            // 'wildcardxlfusion_hyper_$dyn-b-1-1-1-h-512-1024-512-w-512-1024-512_00001_.engine' :
-            // (GPU === '4080' ? 'wildcardxlfusion_hyper_4080_$dyn-b-1-2-1-h-512-1024-512-w-512-1024-512_00001_.engine' :
-            // 'wildcardxlfusion_hyper_3080_$dyn-b-1-2-1-h-512-1024-512-w-512-1024-512_00001_.engine'),
+            modelSelectedRef.current.model4090 :
+            modelSelectedRef.current.model4080,
         });
         setOrderedPromptIds(prevIds => [...prevIds, response.prompt_id]);
       };
-
+      
       const comfy = new ComfyUI({
         comfyUIServerURL: URL,
         nodes: {
           seeds: ['213'],
           prompts: ['6'],
           denoise: ['213'],
+          vae: ['100'],
+          checkpoint: ['4'],
           base64_data: ['214'],
           api_save: ['204'],
           unet_name: ['151'],
+          model_type: ['151'],
         },
         onSaveCallback: async (message, promptId) => {
           // Determine the index of the current promptId in the ordered list
           const index = orderedPromptIdsRef.current.indexOf(promptId);
           onFrameReceived(message, index, GPU);
+
+          if (GPU === '4090') {
+            timeRef4090.current = Date.now().valueOf();
+            // console.log(`Received frame from GPU ${GPU} in ${timeRef4090.current - timeRef4080.current}ms`);
+          } else if (GPU === '4080') {
+            timeRef4080.current = Date.now().valueOf();
+            // console.log(`Received frame from GPU ${GPU} in ${timeRef4080.current - timeRef4090.current}ms`);
+          }
         },
         onQueueCallback: () => {
           queueComfy.current();
@@ -143,23 +189,72 @@ const Main = () => {
 
     const captureFrame = () => {
       if (!canvasRef.current || !videoRef.current) return;
-
+    
       const canvas = canvasRef.current;
       const video = videoRef.current;
       const context = canvas.getContext('2d');
-
-      // Draw the current video frame onto the canvas
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
+    
+      // Calculate the aspect ratio of the video
+      const videoAspectRatio = video.videoWidth / video.videoHeight;
+    
+      // Calculate the target dimensions to maintain aspect ratio
+      let targetWidth, targetHeight;
+      if (canvas.width / videoAspectRatio <= canvas.height) {
+        targetWidth = canvas.width;
+        targetHeight = canvas.width / videoAspectRatio;
+      } else {
+        targetWidth = canvas.height * videoAspectRatio;
+        targetHeight = canvas.height;
+      }
+    
+      // Calculate offsets to center the image
+      const offsetX = (canvas.width - targetWidth) / 2;
+      const offsetY = (canvas.height - targetHeight) / 2;
+    
+      // Clear the canvas and draw the video frame with aspect ratio maintained
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(video, offsetX, offsetY, targetWidth, targetHeight);
+    
       // Optionally, return the current frame's data URL
       return canvas.toDataURL('image/png').replace('data:image/png;base64,', '');
     };
 
-  }, [onFrameReceived]);
+    return () => {
+      // Cleanup function
+    };
+  }, []);
   
   useEffect(() => {
-    // Initialize devices and start media
+    console.log('Setting up canvas...');
 
+    const min = modelSelected.min;
+    const max = modelSelected.max;
+    const canvas = canvasRef.current;
+    const aspectRatio = window.innerWidth / window.innerHeight;
+
+    // Initial dimensions within min/max constraints
+    let width = Math.max(min, Math.min(max, window.innerWidth));
+    let height = Math.max(min, Math.min(max, window.innerHeight));
+
+    // Adjust dimensions based on aspect ratio
+    if (width > height) {
+      height = Math.min(Math.max(min, width / aspectRatio), max);
+    } else {
+      width = Math.min(Math.max(min, height * aspectRatio), max);
+    }
+
+    // Ensure final dimensions are within min/max constraints
+    width = Math.max(min, Math.min(max, width));
+    height = Math.max(min, Math.min(max, height));
+
+    // Apply final dimensions
+    canvas.width = width;
+    canvas.height = height;
+
+    console.log(canvas.width, canvas.height);
+  }, [modelSelected]);
+
+  useEffect(() => {
     const initializeDevices = async () => {
       const getDevices = async () => {
         if (navigator.mediaDevices?.enumerateDevices) {
@@ -172,6 +267,7 @@ const Main = () => {
           }
         }
       };
+
       await getDevices();
       startMedia();
     };
@@ -187,10 +283,10 @@ const Main = () => {
         ? navigator.mediaDevices.getDisplayMedia({ video: true })
         : navigator.mediaDevices.getUserMedia({ 
           video: {
-            deviceId: { exact: selectedDeviceId },
+            deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
             facingMode: { ideal: 'environment' },
           },
-         });
+        });
 
       mediaPromise
         .then((stream) => {
@@ -212,15 +308,19 @@ const Main = () => {
     setIsPaused(newPauseState);
     isPausedRef.current = newPauseState;
     if (!newPauseState) {
-      if (queueComfy.current) {
-        queueComfy.current();
+      startPlayback();
+      if (queueComfy4090.current) {
+        queueComfy4090.current();
       }
-      if (queueComfy2.current) {
-        queueComfy2.current();
+      if (queueComfy4080.current) {
+        queueComfy4080.current();
       }
-      if (queueComfy3.current) {
-        queueComfy3.current();
+      if (queueComfy3080.current) {
+        queueComfy3080.current();
       }
+    }
+    else {
+      stopPlayback();
     }
   };
 
@@ -355,11 +455,20 @@ const Main = () => {
     }
   }, [gamepads]);
 
+  // Settings Modal
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleModal = () => setIsOpen(!isOpen);
+
+  function handleModelChange(event) {
+    setModelSelected(JSON.parse(event.target.value));
+  }  
+
   return (
     <div>
       <div onClick={throttleScreenshot}>
       {outputImageRef ? (
-        <img ref={outputImageRef} alt={outputImageRef.current} className="mx-auto my-4" />
+        <img ref={outputImageRef} className="mx-auto my-auto full-image" />
       ) : 'null'}
         <video
           onClick={handleDeviceChange}
@@ -378,6 +487,7 @@ const Main = () => {
             value={prompt}
             onChange={handlePromptChange}
             placeholder="Enter prompt"
+            onFocus = {(e) => e.target.select()}
           />
         </div>
         <div className="flex flex-row justify-between items-center space-x-4 w-full">
@@ -406,13 +516,13 @@ const Main = () => {
             {isPaused ? 'Resume' : 'Pause'}
           </Button>
           <Button
-            className='hide-on-mobile'
+            className=''
             id="fullscreenButton"
             variant="primary"
             size="md"
             onClick={handleFullscreenClick}
           >
-            {isFullScreen ? 'Exit Full Screen' : 'Go Full Screen'}
+            {isFullScreen ? 'X' : 'FS'}
           </Button>
           <Button
             className='hide-on-mobile'
@@ -430,8 +540,40 @@ const Main = () => {
             <br />
             Buttons: Prompt
           </div>
+          <Button
+            id="settingsButton"
+            variant="primary"
+            size="md"
+            onClick={handleModal}
+          >
+            Settings
+          </Button>
         </div>
       </div>
+      {isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+          <div className="bg-white rounded-lg shadow-lg p-5">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Settings</h2>
+              <button onClick={handleModal} className="text-black">&times;</button>
+            </div>
+            <div className="mt-4">
+              <label htmlFor="setting1" className="block mb-2">Model Selection</label>
+              <select id="setting1" className="block w-full p-2 border border-gray-300 rounded" onChange={handleModelChange}>
+                {modelOptions.current.map((model, index) => (
+                  <option key={index} value={JSON.stringify(model)}>{model.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button onClick={handleModal} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
     </div>
   );
 };

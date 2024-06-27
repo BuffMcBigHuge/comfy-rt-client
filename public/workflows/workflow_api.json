@@ -126,7 +126,7 @@
       "seed": 0,
       "steps": 2,
       "cfg": 1,
-      "sampler_name": "uni_pc",
+      "sampler_name": "ddim",
       "scheduler": "ddim_uniform",
       "denoise": 0.7,
       "noise_mode": "GPU(=A1111)",
