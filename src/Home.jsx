@@ -56,7 +56,7 @@ const Main = () => {
     }, 
     {
       model4080: 'wildcardxlfusion_hyper_4080_$dyn-b-1-2-1-h-896-1216-1216-w-896-1216-1216_00001_.engine',
-      model4090: 'wildcardxlfusion_4090_$dyn-b-1-2-1-h-896-1216-1216-w-896-1216-1216_00001_.engine',
+      model4090: 'wildcardxlfusion_hyper_4090_$dyn-b-1-2-1-h-896-1216-1216-w-896-1216-1216_00001_.engine',
       label: 'Wildcard Fusion XL (896/1216)',
       model_type: 'sdxl_base',
       vae: 'taesdxl',
@@ -84,6 +84,16 @@ const Main = () => {
       min: 512,
       max: 1024,
     },
+    {
+      model4080: 'dreamshaper_hyper_4080_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
+      model4090: 'dreamshaper_hyper_4090_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
+      label: 'Dreamshaper (512/1024)',
+      model_type: 'sd1.x',
+      vae: 'taesd',
+      model: 'sd15\\dreamshaper_8.safetensors',
+      min: 512,
+      max: 1024,
+    },
   ]);
   const [modelSelected, setModelSelected] = useState(modelOptions.current[0]);
   const modelSelectedRef = useRef(modelSelected);
@@ -93,7 +103,10 @@ const Main = () => {
   //
   
   const showToast = useToast();
-  const { onFrameReceived, outputImageRef, startPlayback, stopPlayback } = useFrameBuffer();
+  const { onFrameReceived, outputImageRef, startPlayback, stopPlayback, getTargetFrameRate } = useFrameBuffer();
+
+  // Create Ref of getTargetFrameRate
+  const getTargetFrameRateRef = useRef(getTargetFrameRate);
 
   useEffect(() => {
     if (initialized) return;
@@ -461,8 +474,9 @@ const Main = () => {
   const handleModal = () => setIsOpen(!isOpen);
 
   function handleModelChange(event) {
-    setModelSelected(JSON.parse(event.target.value));
-  }  
+    const modelSelected = modelOptions.current.find((model) => model.label === event.target.value);
+    setModelSelected(modelSelected);
+  }
 
   return (
     <div>
@@ -476,6 +490,9 @@ const Main = () => {
           className="fixed right-0 top-5 w-48 h-36 z-50"
         ></video>
         <canvas ref={canvasRef} style={{ display: 'none' }}></canvas>
+      </div>
+      <div className="fixed top-0 size-4 text-2xl text-white m-1">
+        {getTargetFrameRateRef.current()}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-black bg-opacity-20 p-4 backdrop-filter backdrop-blur-lg items-center">
@@ -559,9 +576,9 @@ const Main = () => {
             </div>
             <div className="mt-4">
               <label htmlFor="setting1" className="block mb-2">Model Selection</label>
-              <select id="setting1" className="block w-full p-2 border border-gray-300 rounded" onChange={handleModelChange}>
+              <select id="setting1" className="block w-full p-2 border border-gray-300 rounded" value={modelSelected.label} onChange={handleModelChange}>
                 {modelOptions.current.map((model, index) => (
-                  <option key={index} value={JSON.stringify(model)}>{model.label}</option>
+                  <option key={index} value={model.label}>{model.label}</option>
                 ))}
               </select>
             </div>

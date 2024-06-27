@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 
-const useBufferedFrameDisplay = (initialTargetFPS = 30) => {
+const useBufferedFrameDisplay = (initialTargetFPS = 24) => {
     const outputImageRef = useRef(null);
     const frameBuffer = useRef([]);
     const requestRef = useRef();
@@ -21,7 +21,6 @@ const useBufferedFrameDisplay = (initialTargetFPS = 30) => {
     };
 
     const onFrameReceived = (newFrame, index) => {
-      console.log('Frame received', index)
       const frameInterval = 1000 / targetFPS.current;
       const currentTime = Date.now();
       const expectedDisplayTime = lastFrameTime.current + frameInterval;
@@ -36,13 +35,14 @@ const useBufferedFrameDisplay = (initialTargetFPS = 30) => {
           }
 
           gpuFrameTimings.current.push(currentTime - lastFrameTime.current);
-          if (gpuFrameTimings.current.length > 20) gpuFrameTimings.current.shift();
+          if (gpuFrameTimings.current.length > 5) gpuFrameTimings.current.shift();
 
-          console.log('Average frame timing', getAverageFrameTiming(), 'ms');
+          // console.log('Average frame timing', getAverageFrameTiming(), 'ms');
 
-          if (gpuFrameTimings.current.length === 20) {
+          if (gpuFrameTimings.current.length === 5) {
               const averageFrameTiming = getAverageFrameTiming();
-              const newTargetFPS = Math.min(60, Math.floor(1000 / averageFrameTiming));
+              let newTargetFPS = Math.min(60, Math.floor(1000 / averageFrameTiming));
+              newTargetFPS = Math.max(newTargetFPS, 1);
               if (newTargetFPS !== targetFPS.current) {
                   console.log('Adjusting target FPS to', newTargetFPS);
                   targetFPS.current = newTargetFPS;
@@ -56,6 +56,8 @@ const useBufferedFrameDisplay = (initialTargetFPS = 30) => {
         if (timings.length === 0) return 0;
         return timings.reduce((acc, curr) => acc + curr, 0) / timings.length;
     };
+
+    const getTargetFrameRate = () => targetFPS.current;
 
     const startPlayback = () => {
         frameBuffer.current = [];
@@ -73,7 +75,7 @@ const useBufferedFrameDisplay = (initialTargetFPS = 30) => {
         requestRef.current = null;
     };
 
-    return { onFrameReceived, outputImageRef, startPlayback, stopPlayback };
+    return { onFrameReceived, outputImageRef, startPlayback, stopPlayback, getTargetFrameRate };
 };
 
 export default useBufferedFrameDisplay;
