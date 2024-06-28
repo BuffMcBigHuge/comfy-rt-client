@@ -44,8 +44,8 @@ const useBufferedFrameDisplay = (initialTargetFPS = 24) => {
               let newTargetFPS = Math.min(60, Math.floor(1000 / averageFrameTiming));
               newTargetFPS = Math.max(newTargetFPS, 1);
               if (newTargetFPS !== targetFPS.current) {
-                  console.log('Adjusting target FPS to', newTargetFPS);
-                  targetFPS.current = newTargetFPS;
+                  console.log('Adjusting target FPS to', newTargetFPS + 3);
+                  targetFPS.current = newTargetFPS + 3;
               }
           }
         }

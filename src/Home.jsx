@@ -26,8 +26,6 @@ const Main = () => {
 
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isPaused, setIsPaused] = useState(true);
-  const [prompt, setPrompt] = useState('');
-  const [denoise, setDenoise] = useState(0.5);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [orderedPromptIds, setOrderedPromptIds] = useState([]);
   const [devices, setDevices] = useState([]);
@@ -42,8 +40,18 @@ const Main = () => {
     orderedPromptIdsRef.current = orderedPromptIds;
   }, [orderedPromptIds]);
 
-  // Models
+  // Parameters
   const modelOptions = useRef([
+    {
+      model4080: 'wildcardfusionxl_hyper_4080_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
+      model4090: 'wildcardxlfusion_hyper_4090_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
+      label: 'Wildcard Fusion XL (512/1024)',
+      model_type: 'sdxl_base',
+      vae: 'taesdxl',
+      model: 'sdxl\\wildcardxXLFusion_fusionOG.safetensors',
+      min: 512,
+      max: 1024,
+    },
     {
       model4080: 'pixel_hyper_4080_$dyn-b-1-2-1-h-896-1216-1216-w-896-1216-1216_00001_.engine',
       model4090: 'pixel_hyper_4090_$dyn-b-1-2-1-h-896-1216-1216-w-896-1216-1216_00001_.engine',
@@ -63,16 +71,6 @@ const Main = () => {
       model: 'sdxl\\wildcardxXLFusion_fusionOG.safetensors',
       min: 896,
       max: 1216,
-    },
-    {
-      model4080: 'wildcardfusionxl_hyper_4080_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
-      model4090: 'wildcardxlfusion_hyper_4090_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
-      label: 'Wildcard Fusion XL (512/1024)',
-      model_type: 'sdxl_base',
-      vae: 'taesdxl',
-      model: 'sdxl\\wildcardxXLFusion_fusionOG.safetensors',
-      min: 512,
-      max: 1024,
     },
     {
       model4080: '11_hyper_4080_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
@@ -95,11 +93,25 @@ const Main = () => {
       max: 1024,
     },
   ]);
-  const [modelSelected, setModelSelected] = useState(modelOptions.current[0]);
+
+  const [modelSelected, setModelSelected] = useState(JSON.parse(localStorage.getItem('modelSelected')) || modelOptions.current[0]);
   const modelSelectedRef = useRef(modelSelected);
+  const [prompt, setPrompt] = useState(localStorage.getItem('prompt') || 'Cambodia');
+  const promptRef = useRef(prompt);
+  const [denoise, setDenoise] = useState(localStorage.getItem('denoise') || 0.5);
+  const denoiseRef = useRef(denoise);
+
+  // Handle Model/Prompt/Denoise changes
   useEffect(() => {
+    console.log('Model/Prompt/Denoise changed:', modelSelected, prompt, denoise);
     modelSelectedRef.current = modelSelected;
-  }, [modelSelected]);
+    promptRef.current = prompt;
+    denoiseRef.current = denoise;
+
+    localStorage.setItem('prompt', prompt);
+    localStorage.setItem('modelSelected', JSON.stringify(modelSelected));
+    localStorage.setItem('denoise', denoise);
+  }, [modelSelected, prompt, denoise]);
   //
   
   const showToast = useToast();
@@ -113,15 +125,6 @@ const Main = () => {
     setInitialized(true);
 
     console.log('Starting ComfyUI RT Client...');
-
-    // Load Prompt/Denoise from Cookie
-    const loadCookieValue = (name) => {
-      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-      if (match) return match[2];
-      return null;
-    };
-    setPrompt(loadCookieValue('prompt') || handlePromptChange({ target: { value: 'Cool'}}));
-    setDenoise(loadCookieValue('denoise') || handleDenoiseChange({ target: { value: '0.5'}}));
 
     // Load Workflow
     let workflow, workflowAPI;
@@ -146,15 +149,11 @@ const Main = () => {
       queueComfy.current = async () => {
         if (isPausedRef.current) return;
 
-        // Retrieve Denoise/Prompt from Cookie
-        const prompt = loadCookieValue('prompt');
-        const denoise = parseFloat(loadCookieValue('denoise')).toFixed(1);
-
         const response = await comfy.queue({
           workflow,
           workflowAPI,
-          prompt,
-          denoise,
+          prompt: promptRef.current,
+          denoise: denoiseRef.current,
           checkpoint: modelSelectedRef.current.model,
           vae: modelSelectedRef.current.vae,
           model_type: modelSelectedRef.current.model_type,
@@ -264,7 +263,7 @@ const Main = () => {
     canvas.width = width;
     canvas.height = height;
 
-    console.log(canvas.width, canvas.height);
+    console.log(`Setting up canvas: ${canvas.width} x ${canvas.height}`);
   }, [modelSelected]);
 
   useEffect(() => {
@@ -364,12 +363,10 @@ const Main = () => {
 
   const handlePromptChange = (event) => {
     setPrompt(event.target.value);
-    document.cookie = `prompt=${event.target.value}; path=/`;
   };
 
   const handleDenoiseChange = (event) => {
     setDenoise(event.target.value);
-    document.cookie = `denoise=${event.target.value}; path=/`;
   };
 
   const handleScreenShare = () => {
