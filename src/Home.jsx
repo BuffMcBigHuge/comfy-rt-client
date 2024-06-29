@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GamepadsProvider, useGamepads } from 'react-gamepads';
 import { v4 as uuidv4 } from 'uuid';
+import { FiPlay, FiPause, FiMaximize, FiMinimize, FiCamera, FiCreditCard, FiX, FiSettings } from "react-icons/fi";
 
 import Button from './components/Button';
 import { useToast } from './components/Toast';
@@ -479,21 +480,21 @@ const Main = () => {
     <div>
       <div onClick={throttleScreenshot}>
       {outputImageRef ? (
-        <img ref={outputImageRef} className="mx-auto my-auto full-image" />
+        <img ref={outputImageRef} className="mx-auto my-auto full-image border-red-50" />
       ) : 'null'}
         <video
           onClick={handleDeviceChange}
           ref={videoRef}
-          className="fixed right-0 top-5 w-48 h-36 z-50"
+          className="fixed right-0 top-0 w-48 h-36 z-50"
         ></video>
         <canvas ref={canvasRef} style={{ display: 'none' }}></canvas>
       </div>
       <div className="fixed top-0 size-4 text-2xl text-white m-1">
-        {getTargetFrameRateRef.current()}
+        {isPaused ? 'Paused' : getTargetFrameRateRef.current()}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-black bg-opacity-20 p-4 backdrop-filter backdrop-blur-lg items-center">
-        <div className="flex flex-row">
+      <div className="rounded-lg m-2 fixed bottom-0 left-0 right-0 bg-black bg-opacity-20 p-4 backdrop-filter backdrop-blur-lg items-center">
+        <div className="flex flex-1 flex-row">
           <input
             type="text"
             id="prompt"
@@ -504,9 +505,9 @@ const Main = () => {
             onFocus = {(e) => e.target.select()}
           />
         </div>
-        <div className="flex flex-row justify-between items-center space-x-4 w-full">
+        <div className="flex flex-row justify-between items-center space-x-2 w-full">
           <div className="flex flex-1 flex-col items-center">
-            <label htmlFor="denoise" className="text-sm text-gray-300">
+            <label htmlFor="denoise" className="text-sm text-gray-500">
               Denoise
             </label>
             <input
@@ -515,7 +516,7 @@ const Main = () => {
               min="0.01"
               max="1"
               step="0.01"
-              className="mt-2 w-full h-2 appearance-none bg-transparent slider"
+              className="mt-2  mr-2 w-full h-4 appearance-none bg-transparent slider"
               value={denoise}
               onChange={handleDenoiseChange}
               onFocus={(e) => e.target.blur()}
@@ -527,7 +528,7 @@ const Main = () => {
             size="md"
             onClick={handlePauseClick}
           >
-            {isPaused ? 'Resume' : 'Pause'}
+            {isPaused ? <FiPlay /> : <FiPause />}
           </Button>
           <Button
             className=''
@@ -536,7 +537,7 @@ const Main = () => {
             size="md"
             onClick={handleFullscreenClick}
           >
-            {isFullScreen ? 'X' : 'FS'}
+            {isFullScreen ? <FiMinimize /> : <FiMaximize />}
           </Button>
           <Button
             className='hide-on-mobile'
@@ -545,7 +546,15 @@ const Main = () => {
             size="md"
             onClick={handleScreenShare}
           >
-            {isScreenSharing ? 'Screen' : 'Webcam'}
+            {isScreenSharing ? <FiCreditCard /> : <FiCamera />}
+          </Button>
+          <Button
+            id="settingsButton"
+            variant="primary"
+            size="md"
+            onClick={handleModal}
+          >
+            <FiSettings />
           </Button>
           <div className="text-white text-center hide-on-mobile">          
             Left stick: Denoise
@@ -554,24 +563,19 @@ const Main = () => {
             <br />
             Buttons: Prompt
           </div>
-          <Button
-            id="settingsButton"
-            variant="primary"
-            size="md"
-            onClick={handleModal}
-          >
-            Settings
-          </Button>
         </div>
       </div>
+
       {isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
           <div className="bg-white rounded-lg shadow-lg p-5">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Settings</h2>
-              <button onClick={handleModal} className="text-black">&times;</button>
+              <button onClick={handleModal} className="text-black">
+                <FiX />
+              </button>
             </div>
-            <div className="mt-4">
+            <div className="mt-2">
               <label htmlFor="setting1" className="block mb-2">Model Selection</label>
               <select id="setting1" className="block w-full p-2 border border-gray-300 rounded" value={modelSelected.label} onChange={handleModelChange}>
                 {modelOptions.current.map((model, index) => (
@@ -579,7 +583,7 @@ const Main = () => {
                 ))}
               </select>
             </div>
-            <div className="mt-4 flex justify-end">
+            <div className="mt-2 flex justify-end">
               <button onClick={handleModal} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700">
                 Close
               </button>
