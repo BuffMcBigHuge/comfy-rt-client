@@ -5,32 +5,50 @@ const useBufferedFrameDisplay = (initialTargetFPS = 24) => {
   const frameBuffer = useRef([]);
   const requestRef = useRef();
   const lastFrameTime = useRef(Date.now());
-  const lastFrameIndex = useRef(0);
-  const gpuFrameTimings = useRef([]); 
+  const lastFrameIndex = useRef(1);
+  const gpuFrameTimings = useRef([]);
   const targetFPS = useRef(initialTargetFPS);
+  const frameDropCount = useRef(0);
+  const maxFrameDrop = 10;
+  const frameInterval = 1000 / initialTargetFPS;
+  const fallbackTimeout = 1000; // Fallback to avoid extended black screens
 
   const displayNextFrame = () => {
     const currentTime = Date.now();
 
-    if (frameBuffer.current.length > 0 && currentTime >= frameBuffer.current[0].expectedDisplayTime) {
-      // Check if the next frame is the one we want to display
-      if (frameBuffer.current[0].index !== lastFrameIndex.current + 1 
-        && lastFrameTime.current + 1000 < currentTime) {
-        console.warn('Frame dropped');
-      } else {
-        const nextFrame = frameBuffer.current.shift();
-        if (outputImageRef.current) {
-          outputImageRef.current.src = nextFrame.frame;
+    if (frameBuffer.current.length > 0) {
+      const nextFrame = frameBuffer.current[0];
+
+      if (currentTime >= nextFrame.expectedDisplayTime) {
+        if (nextFrame.index > lastFrameIndex.current + 1) {
+          frameDropCount.current++;
+          console.warn('Skipping frame due to delay:', nextFrame.index);
+
+          if (frameDropCount.current >= maxFrameDrop) {
+            frameDropCount.current = 0;
+            lastFrameIndex.current = nextFrame.index - 1;
+          }
+        } else {
+          frameDropCount.current = 0;
+          lastFrameIndex.current = nextFrame.index;
+          frameBuffer.current.shift();
+          if (outputImageRef.current) {
+            outputImageRef.current.src = nextFrame.frame;
+          }
+          console.log('Frame displayed:', nextFrame.index);
         }
         lastFrameTime.current = currentTime;
-        lastFrameIndex.current = nextFrame.index;
       }
+    } else if (currentTime - lastFrameTime.current > fallbackTimeout) {
+      // Fallback to avoid black screens
+      console.warn('Fallback triggered');
+      lastFrameTime.current = currentTime;
     }
+
     requestRef.current = requestAnimationFrame(displayNextFrame);
   };
 
   const onFrameReceived = (newFrame, index) => {
-    const frameInterval = 1000 / targetFPS.current;
     const currentTime = Date.now();
     const expectedDisplayTime = lastFrameTime.current + frameInterval;
     const frameObject = { frame: newFrame, expectedDisplayTime, index };
@@ -74,12 +92,20 @@ const useBufferedFrameDisplay = (initialTargetFPS = 24) => {
       cancelAnimationFrame(requestRef.current);
     }
     requestRef.current = requestAnimationFrame(displayNextFrame);
-};
+  };
 
   const stopPlayback = () => {
-    cancelAnimationFrame(requestRef.current);
-    requestRef.current = null;
+    if (requestRef.current) {
+      cancelAnimationFrame(requestRef.current);
+      requestRef.current = null;
+    }
   };
+
+  useEffect(() => {
+    return () => {
+      stopPlayback();
+    };
+  }, []);
 
   return { onFrameReceived, outputImageRef, startPlayback, stopPlayback, getTargetFrameRate };
 };
