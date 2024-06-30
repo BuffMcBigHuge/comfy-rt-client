@@ -9,7 +9,7 @@ const useBufferedFrameDisplay = (initialTargetFPS = 24) => {
   const gpuFrameTimings = useRef([]);
   const targetFPS = useRef(initialTargetFPS);
   const frameDropCount = useRef(0);
-  const maxFrameDrop = 10;
+  const maxFrameDrop = 5;
   const frameInterval = 1000 / initialTargetFPS;
   const fallbackTimeout = 1000; // Fallback to avoid extended black screens
 
@@ -20,24 +20,25 @@ const useBufferedFrameDisplay = (initialTargetFPS = 24) => {
       const nextFrame = frameBuffer.current[0];
 
       if (currentTime >= nextFrame.expectedDisplayTime) {
-        if (nextFrame.index > lastFrameIndex.current + 1) {
-          frameDropCount.current++;
-          console.warn('Skipping frame due to delay:', nextFrame.index);
-
-          if (frameDropCount.current >= maxFrameDrop) {
-            frameDropCount.current = 0;
-            lastFrameIndex.current = nextFrame.index - 1;
-          }
-        } else {
+        if (nextFrame.index === lastFrameIndex.current + 1 || frameDropCount.current == maxFrameDrop) {
           frameDropCount.current = 0;
           lastFrameIndex.current = nextFrame.index;
+          lastFrameTime.current = currentTime;
           frameBuffer.current.shift();
           if (outputImageRef.current) {
             outputImageRef.current.src = nextFrame.frame;
           }
           console.log('Frame displayed:', nextFrame.index);
+        } else if (nextFrame.index > lastFrameIndex.current + 1) {
+          // Frame dropped
+          frameDropCount.current++;
+          console.warn('Frame dropped:', nextFrame.index);
+          // frameBuffer.current.shift();
+        } else {
+          // Frame already displayed
+          console.warn('Frame already displayed:', nextFrame.index);
+          frameBuffer.current.shift();
         }
-        lastFrameTime.current = currentTime;
       }
     } else if (currentTime - lastFrameTime.current > fallbackTimeout) {
       // Fallback to avoid black screens

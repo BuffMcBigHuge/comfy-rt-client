@@ -76,8 +76,10 @@ class ComfyUI {
           // console.log(message)
   
           if (message.type === 'status') {
-            // console.log('Status Update:', message.data.status)
             this.queueRemaining = message.data.status.exec_info.queue_remaining;
+            if (this.queueRemaining === 0) {
+              this.onQueueCallback();
+            }
           }
   
           if (message.type === 'execution_error') {
@@ -88,7 +90,6 @@ class ComfyUI {
           if (message.data?.prompt_id) {
             if (message.type === 'executed') {
               // Queue Next Frame
-              this.onQueueCallback();
               this.onSaveCallback(this.imageURL, message.data.prompt_id);
             }
 
@@ -163,7 +164,7 @@ class ComfyUI {
             } else if (nodeType === 'denoise') {
               workflowApiTemp[nodeId].inputs.denoise = denoise;
             } else if (nodeType === 'strength') {
-              workflowApiTemp[nodeId].inputs.strength = 1 - denoise;
+              // workflowApiTemp[nodeId].inputs.strength = 1 - denoise;
               // workflowApiTemp[nodeId].inputs.end_percent = 1 - denoise;
             } else if (nodeType === 'vae') {
               workflowApiTemp[nodeId].inputs.vae_name = vae;

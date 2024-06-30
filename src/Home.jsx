@@ -79,11 +79,11 @@ const Main = () => {
 
     // Load Workflow
     let workflow, workflowAPI;
-    fetch('./workflows/workflow2.json')
+    fetch('./workflows/workflow.json')
       .then((response) => response.json())
       .then((data) => {
         workflow = data;
-        return fetch('./workflows/workflow2_api.json');
+        return fetch('./workflows/workflow_api.json');
       })
       .then((response) => response.json())
       .then((data) => {
@@ -118,7 +118,6 @@ const Main = () => {
         comfyUIServerURL: URL,
         nodes: {
           seeds: ['213'],
-          strength: ['224'],
           denoise: ['213'],
           steps: ['213'],
           prompts: ['6'],
@@ -126,11 +125,14 @@ const Main = () => {
           ckpt_name: ['4'],
           base64_data: ['214'],
           api_save: ['204'],
-          lora_name: ['217'],
-          lora_name_detail: ['227'],
-          control_net_name: ['222'],
-          //unet_name: ['151'],
-          //model_type: ['151'],
+          // Workflow 2
+          // strength: ['224'],
+          // lora_name: ['217'],
+          // lora_name_detail: ['227'],
+          // control_net_name: ['222'],
+          // Workflow 1
+          unet_name: ['151'],
+          model_type: ['151'],
         },
         onSaveCallback: async (message, promptId) => {
           // Determine the index of the current promptId in the ordered list
