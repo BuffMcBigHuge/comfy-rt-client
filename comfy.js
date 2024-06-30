@@ -133,11 +133,15 @@ class ComfyUI {
     workflowAPI,
     prompt,
     base64_data,
-    checkpoint,
+    ckpt_name,
+    steps,
     denoise,
     vae,
     unet_name,
     model_type,
+    lora_name,
+    lora_name_detail,
+    control_net_name,
   }) {
     return new Promise(async (resolve, reject) => {
       try {
@@ -158,16 +162,27 @@ class ComfyUI {
               workflowApiTemp[nodeId].inputs.text = prompt;
             } else if (nodeType === 'denoise') {
               workflowApiTemp[nodeId].inputs.denoise = denoise;
+            } else if (nodeType === 'strength') {
+              workflowApiTemp[nodeId].inputs.strength = 1 - denoise;
+              // workflowApiTemp[nodeId].inputs.end_percent = 1 - denoise;
             } else if (nodeType === 'vae') {
               workflowApiTemp[nodeId].inputs.vae_name = vae;
-            } else if (nodeType === 'checkpoint') {
-              workflowApiTemp[nodeId].inputs.ckpt_name = checkpoint;
+            } else if (nodeType === 'ckpt_name') {
+              workflowApiTemp[nodeId].inputs.ckpt_name = ckpt_name;
+            } else if (nodeType === 'steps') {
+              workflowApiTemp[nodeId].inputs.steps = steps;
             } else if (nodeType === 'base64_data') {
               workflowApiTemp[nodeId].inputs.image = base64_data; // Load Image (Base64)
             } else if (nodeType === 'unet_name') {
               workflowApiTemp[nodeId].inputs.unet_name = unet_name;
             } else if (nodeType === 'model_type') {
               workflowApiTemp[nodeId].inputs.model_type = model_type;
+            } else if (nodeType === 'lora_name') {
+              workflowApiTemp[nodeId].inputs.lora_name = lora_name;
+            } else if (nodeType === 'lora_name_detail') {
+              workflowApiTemp[nodeId].inputs.lora_name = lora_name_detail;
+            } else if (nodeType === 'control_net_name') {
+              workflowApiTemp[nodeId].inputs.control_net_name = control_net_name;
             }
           });
         }

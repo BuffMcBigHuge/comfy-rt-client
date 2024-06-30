@@ -1,0 +1,290 @@
+{
+  "4": {
+    "inputs": {
+      "ckpt_name": "sdxl\\wildcardxXLFusion_fusionOG.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": "cambodia person",
+      "clip": [
+        "10",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "7": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "10",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "10": {
+    "inputs": {
+      "stop_at_clip_layer": -2,
+      "clip": [
+        "227",
+        1
+      ]
+    },
+    "class_type": "CLIPSetLastLayer",
+    "_meta": {
+      "title": "CLIP Set Last Layer"
+    }
+  },
+  "100": {
+    "inputs": {
+      "vae_name": "taesdxl"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "101": {
+    "inputs": {
+      "samples": [
+        "213",
+        0
+      ],
+      "vae": [
+        "100",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "211": {
+    "inputs": {
+      "pixels": [
+        "214",
+        0
+      ],
+      "vae": [
+        "100",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "213": {
+    "inputs": {
+      "seed": 73588529212625,
+      "steps": 2,
+      "cfg": 1,
+      "sampler_name": "ipndm_v",
+      "scheduler": "ddim_uniform",
+      "denoise": 1,
+      "noise_mode": "GPU(=A1111)",
+      "batch_seed_mode": "comfy",
+      "variation_seed": 1,
+      "variation_strength": 1,
+      "variation_method": "slerp",
+      "model": [
+        "217",
+        0
+      ],
+      "positive": [
+        "224",
+        0
+      ],
+      "negative": [
+        "224",
+        1
+      ],
+      "latent_image": [
+        "211",
+        0
+      ]
+    },
+    "class_type": "KSampler //Inspire",
+    "_meta": {
+      "title": "KSampler (inspire)"
+    }
+  },
+  "214": {
+    "inputs": {
+      "image": ""
+    },
+    "class_type": "ETN_LoadImageBase64",
+    "_meta": {
+      "title": "Load Image (Base64)"
+    }
+  },
+  "215": {
+    "inputs": {
+      "engine": "depth_anything_vits14.engine",
+      "images": [
+        "214",
+        0
+      ]
+    },
+    "class_type": "DepthAnythingTensorrt",
+    "_meta": {
+      "title": "Depth Anything Tensorrt"
+    }
+  },
+  "217": {
+    "inputs": {
+      "lora_name": "Hyper-SDXL-2steps-lora.safetensors",
+      "strength_model": 1,
+      "model": [
+        "227",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "LoraLoaderModelOnly"
+    }
+  },
+  "222": {
+    "inputs": {
+      "control_net_name": "controlnet-depth-sdxl-1.0.safetensors"
+    },
+    "class_type": "ControlNetLoader",
+    "_meta": {
+      "title": "Load ControlNet Model"
+    }
+  },
+  "224": {
+    "inputs": {
+      "strength": 0.5,
+      "start_percent": 0,
+      "end_percent": 0.5,
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "control_net": [
+        "222",
+        0
+      ],
+      "image": [
+        "215",
+        0
+      ]
+    },
+    "class_type": "ControlNetApplyAdvanced",
+    "_meta": {
+      "title": "Apply ControlNet (Advanced)"
+    }
+  },
+  "227": {
+    "inputs": {
+      "lora_name": "add-detail-xl.safetensors",
+      "strength_model": 0.5,
+      "strength_clip": 1,
+      "model": [
+        "4",
+        0
+      ],
+      "clip": [
+        "4",
+        1
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "228": {
+    "inputs": {
+      "image": "Jenna-Ortega-2023.webp",
+      "upload": "image"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "232": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "interpolation": "nearest",
+      "method": "keep proportion",
+      "condition": "always",
+      "multiple_of": 0,
+      "image": [
+        "228",
+        0
+      ]
+    },
+    "class_type": "ImageResize+",
+    "_meta": {
+      "title": "🔧 Image Resize"
+    }
+  },
+  "233": {
+    "inputs": {
+      "images": [
+        "101",
+        0
+      ]
+    },
+    "class_type": "ETN_SendImageWebSocket",
+    "_meta": {
+      "title": "Send Image (WebSocket)"
+    }
+  },
+  "241": {
+    "inputs": {},
+    "class_type": "GetImageSize+",
+    "_meta": {
+      "title": "🔧 Get Image Size"
+    }
+  },
+  "242": {
+    "inputs": {
+      "width": [
+        "241",
+        0
+      ],
+      "height": [
+        "241",
+        1
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "243": {
+    "inputs": {
+      "blend_factor": 0.5
+    },
+    "class_type": "LatentBlend",
+    "_meta": {
+      "title": "Latent Blend"
+    }
+  }
+}

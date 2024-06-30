@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { GamepadsProvider, useGamepads } from 'react-gamepads';
+import { GamepadsProvider, useGamepads, } from 'react-gamepads';
 import { v4 as uuidv4 } from 'uuid';
 import { FiPlay, FiPause, FiMaximize, FiMinimize, FiCamera, FiCreditCard, FiX, FiSettings } from "react-icons/fi";
 
@@ -10,6 +10,7 @@ import useFrameBuffer from './hooks/FrameBufferHook';
 
 import { storage, ref, uploadBytes } from '../firebase';
 import ComfyUI from '../comfy';
+import models from '../models';
 
 const Main = () => {
   const COMFY_SERVER_URL_4090 = 'http://10.0.0.4:8188';
@@ -21,9 +22,6 @@ const Main = () => {
 
   const queueComfy4080 = useRef(() => {});
   const timeRef4080 = useRef(0);
-
-  const queueComfy3080 = useRef(() => {});
-  const timeRef3080 = useRef(0);
 
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isPaused, setIsPaused] = useState(true);
@@ -42,58 +40,7 @@ const Main = () => {
   }, [orderedPromptIds]);
 
   // Parameters
-  const modelOptions = useRef([
-    {
-      model4080: 'wildcardfusionxl_hyper_4080_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
-      model4090: 'wildcardxlfusion_hyper_4090_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
-      label: 'Wildcard Fusion XL (512/1024)',
-      model_type: 'sdxl_base',
-      vae: 'taesdxl',
-      model: 'sdxl\\wildcardxXLFusion_fusionOG.safetensors',
-      min: 512,
-      max: 1024,
-    },
-    {
-      model4080: 'pixel_hyper_4080_$dyn-b-1-2-1-h-896-1216-1216-w-896-1216-1216_00001_.engine',
-      model4090: 'pixel_hyper_4090_$dyn-b-1-2-1-h-896-1216-1216-w-896-1216-1216_00001_.engine',
-      label: 'Pixel Alchemy (896/1216)',
-      model_type: 'sdxl_base',
-      vae: 'taesdxl',
-      model: 'sdxl\\pixelAlchemy_pixelAlchemyV16.safetensors',
-      min: 896,
-      max: 1216,
-    }, 
-    {
-      model4080: 'wildcardxlfusion_hyper_4080_$dyn-b-1-2-1-h-896-1216-1216-w-896-1216-1216_00001_.engine',
-      model4090: 'wildcardxlfusion_hyper_4090_$dyn-b-1-2-1-h-896-1216-1216-w-896-1216-1216_00001_.engine',
-      label: 'Wildcard Fusion XL (896/1216)',
-      model_type: 'sdxl_base',
-      vae: 'taesdxl',
-      model: 'sdxl\\wildcardxXLFusion_fusionOG.safetensors',
-      min: 896,
-      max: 1216,
-    },
-    {
-      model4080: '11_hyper_4080_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
-      model4090: '11_hyper_4090_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
-      label: '11 (512/1024)',
-      model_type: 'sd1.x',
-      vae: 'taesd',
-      model: 'sd15\\11.safetensors',
-      min: 512,
-      max: 1024,
-    },
-    {
-      model4080: 'dreamshaper_hyper_4080_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
-      model4090: 'dreamshaper_hyper_4090_$dyn-b-1-2-1-h-512-1024-1024-w-512-1024-1024_00001_.engine',
-      label: 'Dreamshaper (512/1024)',
-      model_type: 'sd1.x',
-      vae: 'taesd',
-      model: 'sd15\\dreamshaper_8.safetensors',
-      min: 512,
-      max: 1024,
-    },
-  ]);
+  const modelOptions = useRef(models.models);
 
   const [modelSelected, setModelSelected] = useState(JSON.parse(localStorage.getItem('modelSelected')) || modelOptions.current[0]);
   const modelSelectedRef = useRef(modelSelected);
@@ -101,6 +48,8 @@ const Main = () => {
   const promptRef = useRef(prompt);
   const [denoise, setDenoise] = useState(localStorage.getItem('denoise') || 0.5);
   const denoiseRef = useRef(denoise);
+  const [steps, setSteps] = useState(localStorage.getItem('steps') || 2);
+  const stepsRef = useRef(steps);
 
   // Handle Model/Prompt/Denoise changes
   useEffect(() => {
@@ -108,11 +57,12 @@ const Main = () => {
     modelSelectedRef.current = modelSelected;
     promptRef.current = prompt;
     denoiseRef.current = denoise;
-
+    stepsRef.current = steps;
+    localStorage.setItem('steps', steps);
     localStorage.setItem('prompt', prompt);
     localStorage.setItem('modelSelected', JSON.stringify(modelSelected));
     localStorage.setItem('denoise', denoise);
-  }, [modelSelected, prompt, denoise]);
+  }, [modelSelected, prompt, denoise, steps]);
   //
   
   const showToast = useToast();
@@ -129,18 +79,17 @@ const Main = () => {
 
     // Load Workflow
     let workflow, workflowAPI;
-    fetch('./workflows/workflow.json')
+    fetch('./workflows/workflow2.json')
       .then((response) => response.json())
       .then((data) => {
         workflow = data;
-        return fetch('./workflows/workflow_api.json');
+        return fetch('./workflows/workflow2_api.json');
       })
       .then((response) => response.json())
       .then((data) => {
         workflowAPI = data;
         initializeComfyUI('4090', COMFY_SERVER_URL_4090, queueComfy4090);
         initializeComfyUI('4080', COMFY_SERVER_URL_4080, queueComfy4080);
-        // initializeComfyUI('3080', COMFY_SERVER_URL_3080, queueComfy3080);
       })
       .catch((error) => console.error('Error:', error));
 
@@ -151,13 +100,12 @@ const Main = () => {
         if (isPausedRef.current) return;
 
         const response = await comfy.queue({
+          ...modelSelectedRef.current,
           workflow,
           workflowAPI,
+          steps: stepsRef.current,
           prompt: promptRef.current,
           denoise: denoiseRef.current,
-          checkpoint: modelSelectedRef.current.model,
-          vae: modelSelectedRef.current.vae,
-          model_type: modelSelectedRef.current.model_type,
           base64_data: captureFrame(),
           unet_name: GPU === '4090' ?
             modelSelectedRef.current.model4090 :
@@ -170,14 +118,19 @@ const Main = () => {
         comfyUIServerURL: URL,
         nodes: {
           seeds: ['213'],
-          prompts: ['6'],
+          strength: ['224'],
           denoise: ['213'],
+          steps: ['213'],
+          prompts: ['6'],
           vae: ['100'],
-          checkpoint: ['4'],
+          ckpt_name: ['4'],
           base64_data: ['214'],
           api_save: ['204'],
-          unet_name: ['151'],
-          model_type: ['151'],
+          lora_name: ['217'],
+          lora_name_detail: ['227'],
+          control_net_name: ['222'],
+          //unet_name: ['151'],
+          //model_type: ['151'],
         },
         onSaveCallback: async (message, promptId) => {
           // Determine the index of the current promptId in the ordered list
@@ -328,9 +281,6 @@ const Main = () => {
       if (queueComfy4080.current) {
         queueComfy4080.current();
       }
-      if (queueComfy3080.current) {
-        queueComfy3080.current();
-      }
     }
     else {
       stopPlayback();
@@ -369,6 +319,10 @@ const Main = () => {
   const handleDenoiseChange = (event) => {
     setDenoise(event.target.value);
   };
+  
+  const handleStepChange = (event) => {
+    setSteps(event.target.value);
+  };
 
   const handleScreenShare = () => {
     setIsScreenSharing(!isScreenSharing);
@@ -380,7 +334,56 @@ const Main = () => {
     setSelectedDeviceId(deviceId);
   };
 
-  const gamepads = useGamepads(gamepads => setGamepads(gamepads));
+  const [gamepads, setGamepads] = useState({});
+  useGamepads((gamepads) => setGamepads(gamepads));
+
+  useEffect(() => {
+    const defaultGamepad = Object.keys(gamepads).length > 0 ? gamepads[0] : {};
+    if ('axes' in defaultGamepad) {
+      const leftStickX = defaultGamepad.axes[0];
+      const rightStickX = defaultGamepad.axes[2];
+
+      if (leftStickX > 0.5) {
+        throttledSetDenoise((prevDenoise) => {
+          let newDenoise = Math.min(1, parseFloat(prevDenoise) + 0.01);
+          newDenoise = Math.max(0.01, newDenoise);
+          return newDenoise.toFixed(2);
+        });
+      } else if (leftStickX < -0.5) {
+        throttledSetDenoise((prevDenoise) => {
+          let newDenoise = Math.max(0.01, parseFloat(prevDenoise) - 0.01);
+          return newDenoise.toFixed(2);
+        });
+      }
+      if (rightStickX > 0.5) {
+        throttledSetSteps((prevSteps) => {
+          let newSteps = prevSteps + 1;
+          newSteps = Math.min(5, newSteps); // Ensure newSteps does not exceed 5
+          return newSteps;
+        });
+      } else if (rightStickX < -0.5) {
+        throttledSetSteps((prevSteps) => {
+          let newSteps = prevSteps - 1;
+          newSteps = Math.max(1, newSteps); // Ensure newSteps does not go below 1
+          return newSteps;
+        });
+      }
+    }
+    if ('buttons' in defaultGamepad) {
+      defaultGamepad.buttons.forEach((button, index) => {
+        if (button.pressed) {
+          if (index === 17) {
+            throttleScreenshot();
+          } else {
+            const newPrompt = prompts[index];
+            document.cookie = `prompt=${newPrompt}; path=/`;
+            setPrompt(newPrompt);
+            return newPrompt;
+          }
+        }
+      });
+    }
+  }, [gamepads]);
 
   const prompts = [
     'mexico city',
@@ -404,7 +407,11 @@ const Main = () => {
 
   const throttledSetDenoise = useOnPressThrottle((newDenoise) => {
     setDenoise(newDenoise);
-  }, 1);
+  }, 10);
+  
+  const throttledSetSteps = useOnPressThrottle((newSteps) => {
+    setSteps(newSteps);
+  }, 100);
 
   const throttleScreenshot = useOnPressThrottle(() => {
     const imgSrc = outputImageRef.current;
@@ -428,43 +435,6 @@ const Main = () => {
       })
       .catch(error => console.error('Error fetching and converting image:', error));
   }, 1000);
-
-  useEffect(() => {
-    const defaultGamepad = Object.keys(gamepads).length > 0 ? gamepads[0] : {};
-    if ('axes' in defaultGamepad) {
-      const leftStickX = defaultGamepad.axes[0];
-      const leftStickY = defaultGamepad.axes[1];
-
-      if (leftStickX > 0.5) {
-        throttledSetDenoise((prevDenoise) => {
-          let newDenoise = Math.min(1, parseFloat(prevDenoise) + 0.01);
-          newDenoise = Math.max(0.01, newDenoise);
-          document.cookie = `denoise=${newDenoise}; path=/`;
-          return newDenoise.toFixed(2);
-        });
-      } else if (leftStickX < -0.5) {
-        throttledSetDenoise((prevDenoise) => {
-          let newDenoise = Math.max(0.01, parseFloat(prevDenoise) - 0.01);
-          document.cookie = `denoise=${newDenoise}; path=/`;
-          return newDenoise.toFixed(2);
-        });
-      }
-    }
-    if ('buttons' in defaultGamepad) {
-      defaultGamepad.buttons.forEach((button, index) => {
-        if (button.pressed) {
-          if (index === 17) {
-            throttleScreenshot();
-          } else {
-            const newPrompt = prompts[index];
-            document.cookie = `prompt=${newPrompt}; path=/`;
-            setPrompt(newPrompt);
-            return newPrompt;
-          }
-        }
-      });
-    }
-  }, [gamepads]);
 
   // Settings Modal
   const [isOpen, setIsOpen] = useState(false);
@@ -494,7 +464,7 @@ const Main = () => {
       </div>
 
       <div className="rounded-lg m-2 fixed bottom-0 left-0 right-0 bg-black bg-opacity-20 p-4 backdrop-filter backdrop-blur-lg items-center">
-        <div className="flex flex-1 flex-row">
+        <div className="flex flex-1 flex-row space-x-2">
           <input
             type="text"
             id="prompt"
@@ -504,24 +474,6 @@ const Main = () => {
             placeholder="Enter prompt"
             onFocus = {(e) => e.target.select()}
           />
-        </div>
-        <div className="flex flex-row justify-between items-center space-x-2 w-full">
-          <div className="flex flex-1 flex-col items-center">
-            <label htmlFor="denoise" className="text-sm text-gray-500">
-              Denoise
-            </label>
-            <input
-              type="range"
-              id="denoise"
-              min="0.01"
-              max="1"
-              step="0.01"
-              className="mt-2  mr-2 w-full h-4 appearance-none bg-transparent slider"
-              value={denoise}
-              onChange={handleDenoiseChange}
-              onFocus={(e) => e.target.blur()}
-            />
-          </div>
           <Button
             id="pauseButton"
             variant="primary"
@@ -556,6 +508,40 @@ const Main = () => {
           >
             <FiSettings />
           </Button>
+        </div>
+        <div className="flex flex-row justify-between items-center space-x-2 w-full mt-2">
+          <div className="flex flex-1 flex-col items-center">
+            <label htmlFor="denoise" className="text-sm text-gray-500">
+              Denoise ({denoise})
+            </label>
+            <input
+              type="range"
+              id="denoise"
+              min="0.01"
+              max="1"
+              step="0.01"
+              className="mt-2  mr-2 w-full h-4 appearance-none bg-transparent slider"
+              value={denoise}
+              onChange={handleDenoiseChange}
+              onFocus={(e) => e.target.blur()}
+            />
+          </div>
+          <div className="flex flex-1 flex-col items-center">
+            <label htmlFor="denoise" className="text-sm text-gray-500">
+              Steps ({steps})
+            </label>
+            <input
+              type="range"
+              id="steps"
+              min="1"
+              max="5"
+              step="1"
+              className="mt-2  mr-2 w-full h-4 appearance-none bg-transparent slider"
+              value={steps}
+              onChange={handleStepChange}
+              onFocus={(e) => e.target.blur()}
+            />
+          </div>
           <div className="text-white text-center hide-on-mobile">          
             Left stick: Denoise
             <br />
